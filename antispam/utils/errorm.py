@@ -57,7 +57,7 @@ class ErrorManager(metaclass=SingletonMeta):
     def report_error(self, name: str, stacktrace: str) -> None:
         """Report new error to DB"""
         self.blog.info('Reporting new error: ' + name)
-        self._dbu.run_single_update_query('insert into skarma.errors (name, stacktrace) VALUES (%s, %s)', (name, stacktrace))
+        self._dbu.run_single_update_query('insert into errors (name, stacktrace) VALUES (%s, %s)', (name, stacktrace))
 
         if self.report_by_email:
             try:

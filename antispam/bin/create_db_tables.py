@@ -116,6 +116,23 @@ def create_violations(dbu: DBUtils):
     dbu.run_single_update_query('alter table violations add unique unique_index(chat_id(255), user_id(255));')
 
 
+def create_usernames_table(dbu: DBUtils):
+    tables = dbu.run_single_query("SHOW TABLES;")
+    if tuple('usernames') in tables:
+        raise DatabaseError("Table 'usernames' already exists")
+
+    dbu.run_single_update_query("""create table usernames
+                                   (
+                                     id int auto_increment,
+                                     user_id text not null,
+                                     name text not null,
+                                     constraint usernames_pk
+                                      primary key (id)
+                                   );""")
+
+    dbu.run_single_update_query("create unique index usernames_user_id_uindex on usernames (user_id(255));")
+
+
 def _run_functions_and_print_db_errors(functions: List[Callable[[DBUtils], None]], dbu: DBUtils):
     for fun in functions:
         try:
@@ -129,5 +146,5 @@ if __name__ == '__main__':
 
     _run_functions_and_print_db_errors([create_error_table, create_mention_banned_users,
                                         create_chats_table, create_announcements_table,
-                                        create_violations], dbu)
+                                        create_violations, create_usernames_table], dbu)
     print('Done.')

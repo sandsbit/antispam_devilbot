@@ -60,9 +60,7 @@ def create_chats_table(dbu: DBUtils):
                                         chat_id text not null,
                                         constraint chats_pk
                                             primary key (id)
-                                   );
-
-""")
+                                   );""")
 
 
 def create_announcements_table(dbu: DBUtils):
@@ -79,6 +77,45 @@ def create_announcements_table(dbu: DBUtils):
                                    );""")
 
 
+def create_mention_banned_users(dbu: DBUtils):
+    tables = dbu.run_single_query("SHOW TABLES;")
+    if tuple('mention_banned_users') in tables:
+        raise DatabaseError("Table 'mention_banned_users' already exists")
+
+    dbu.run_single_update_query("""create table mention_banned_users
+                                   (
+                                     id int auto_increment,
+                                     chat_id text not null,
+                                     user_id text not null,
+                                     ban_mentions bool default false not null,
+                                     constraint mention_banned_users_pk
+                                      primary key (id)
+                                   );""")
+
+    dbu.run_single_update_query('alter table mention_banned_users add unique unique_index(chat_id(255), user_id(255));')
+
+
+def create_violations(dbu: DBUtils):
+    tables = dbu.run_single_query("SHOW TABLES;")
+    if tuple('mention_banned_users') in tables:
+        raise DatabaseError("Table 'mention_banned_users' already exists")
+
+    dbu.run_single_update_query("""create table violations
+                                   (
+                                     id int auto_increment,
+                                     chat_id text not null,
+                                     user_id text not null,
+                                     today date not null,
+                                     violations_today int null,
+                                     violations_month int null,
+                                     last_violation_against text not null,
+                                     constraint violations_pk
+                                      primary key (id)
+                                   );""")
+
+    dbu.run_single_update_query('alter table violations add unique unique_index(chat_id(255), user_id(255));')
+
+
 def _run_functions_and_print_db_errors(functions: List[Callable[[DBUtils], None]], dbu: DBUtils):
     for fun in functions:
         try:
@@ -90,6 +127,7 @@ def _run_functions_and_print_db_errors(functions: List[Callable[[DBUtils], None]
 if __name__ == '__main__':
     dbu = DBUtils()
 
-    _run_functions_and_print_db_errors([create_error_table,
-                                        create_chats_table, create_announcements_table], dbu)
+    _run_functions_and_print_db_errors([create_error_table, create_mention_banned_users,
+                                        create_chats_table, create_announcements_table,
+                                        create_violations], dbu)
     print('Done.')

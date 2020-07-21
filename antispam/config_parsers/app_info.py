@@ -23,6 +23,7 @@
 
 import logging
 import subprocess
+import codecs
 
 from os import path
 from configparser import ConfigParser
@@ -63,7 +64,7 @@ class AppInfo(metaclass=SingletonMeta):
             raise FileNotFoundError(msg)
 
         app_config = ConfigParser()
-        app_config.read(self.APP_CONFIG_FILE)
+        app_config.read_file(codecs.open(self.APP_CONFIG_FILE, 'r', 'utf8'))
 
         self.blog.debug('Successfully read app config file')
 

@@ -1,0 +1,171 @@
+#               _   _                                  _            _ _ _           _
+#    __ _ _ __ | |_(_)___ _ __   __ _ _ __ ___      __| | _____   _(_) | |__   ___ | |_
+#   / _` | '_ \| __| / __| '_ \ / _` | '_ ` _ \    / _` |/ _ \ \ / / | | '_ \ / _ \| __|
+#  | (_| | | | | |_| \__ \ |_) | (_| | | | | | |  | (_| |  __/\ V /| | | |_) | (_) | |_
+#   \__,_|_| |_|\__|_|___/ .__/ \__,_|_| |_| |_|___\__,_|\___| \_/ |_|_|_.__/ \___/ \__|
+#                        |_|                  |_____|
+#
+# Remove excess mentions in telegram groups
+# Copyright (C) 2020 Nikita Serba. All rights reserved
+# https://github.com/sandsbit/antispam_devilbot
+#
+# antispam_devilbot is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License.
+#
+# antispam_devilbot is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with antispam_devilbot. If not, see <https://www.gnu.org/licenses/>.
+
+import logging
+
+from typing import Optional, List, Tuple
+from os import path
+
+from antispam.config_parsers.app_info import AppInfo
+from antispam.utils.db import DBUtils
+from antispam.utils.errorm import ErrorManager, catch_error
+from antispam.utils import lang_tools
+from antispam.announcements import ChatsManager
+
+LICENSE_FILE = "copyinfo.txt"
+
+LICENSE_FILE = path.join(path.dirname(path.abspath(__file__)), '../config', LICENSE_FILE)
+
+license_str: str
+
+with open(LICENSE_FILE, encoding='utf-8') as f:
+    license_str = f.read()
+
+
+@catch_error
+def version(update, context):
+    """Send information about bot"""
+    logging.getLogger('botlog').info('Printing version info to chat with id ' + str(update.effective_chat.id))
+
+    bot_info = AppInfo()
+    message = f"{bot_info.app_name} {bot_info.app_version}\n" \
+              f"{bot_info.app_description}\n" \
+              f"Build: {bot_info.app_build}"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+
+
+@catch_error
+def status(update, context):
+    """Send information about bot status"""
+    blog = logging.getLogger('botlog')
+    blog.info('Printing status info to chat with id ' + str(update.effective_chat.id))
+
+    number_of_errors = ErrorManager().get_number_of_errors()
+    message = f"Status: Running in DEBUG mode ({'Stable' if number_of_errors == 0 else 'Unstable'})\n" \
+              f"Unexpected errors: {number_of_errors} (/clear_errors)\n" \
+              f"Logging status: " + ("logging normally\n" if len(blog.handlers) != 0 else "logging init failed\n") + \
+              f"Database connection status: " + ("connected" if DBUtils().is_connected() else "disconnected (error)")
+    context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+
+
+@catch_error
+def support(update, context):  # TODO: read links from config file
+    """Send information about bot status"""
+    logging.getLogger('botlog').info('Printing support info to chat with id ' + str(update.effective_chat.id))
+
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text='Вы можете задать свой вопрос или преложить идею для бота по адрессу '
+                                  'https://github.com/sandsbit/antispam_devilbot/issues (толькпо по англ.) или '
+                                  'же по написв на почту <nikitaserba@icloud.com>.')
+
+
+@catch_error
+def bug_report(update, context):
+    """Send information about bot status"""
+    logging.getLogger('botlog').info('Printing bug report info to chat with id ' + str(update.effective_chat.id))
+
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text='Сообщить об ошибке можно по адрессу https://github.com/sandsbit/antispam_devilbot/issues '
+                                  '(толькл по англ.). Используйте эту форму только для сообщения об технических '
+                                  'ошибках. Если вас не устраивает что вам/кому-то подняли/опустили карму без повода, '
+                                  'обратитесь к администратору группы. Если вы нашли узявимость в боте, ознакомтесь с '
+                                  'https://github.com/sandsbit/antispam_devilbot/blob/master/SECURITY.md')
+
+
+@catch_error
+def gen_error(update, context):
+    """Generate sample error for debugging"""
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    logging.getLogger('botlog').info(f'Generating sample error! Asked by user #{user_id} in chat #{chat_id}')
+
+    if user_id in AppInfo().admins:
+        ErrorManager().report_error('Test error', f'This sample error was generated for debugging '
+                                                  f'by user #{user_id} in chat #{chat_id}')
+        context.bot.send_message(chat_id=chat_id, text='Sample error successfully generated')
+    else:
+        logging.getLogger('botlog').debug('Error could bot be generated: access denied. Check admins list')
+        context.bot.send_message(chat_id=chat_id, text='Только администратор может сгенерировать тестовую ошибку')
+
+
+@catch_error
+def hhelp(update, context, custom_first_line: Optional[str] = None):
+    chat_id = update.effective_chat.id
+    logging.getLogger('botlog').info(f'Sending help to chat #{chat_id}')
+
+    if custom_first_line is not None:
+        help_ = custom_first_line + '\n\n'
+    else:
+        help_ = 'Нужна помощь? Ловите!\n\n'
+
+    help_ += 'Ммммм тут еще ниче нет!'
+    context.bot.send_message(chat_id=chat_id, text=help_)
+
+
+@catch_error
+def start(update, context):
+    """Save user's chat id"""
+    hhelp(update, context, 'Добро пожаловать!')
+
+    chat_id = update.effective_chat.id
+    logging.getLogger('botlog').info(f'User with id #{chat_id} will be added to database after running /start')
+    ChatsManager().add_new_chat(chat_id)
+
+
+@catch_error
+def clear_errors(update, context):
+    """Clear all errors in DB"""
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    logging.getLogger('botlog').info(f'Deleting all errors! Asked by user #{user_id} in chat #{chat_id}')
+
+    if user_id in AppInfo().admins:
+        ErrorManager().clear_all_errors()
+        context.bot.send_message(chat_id=chat_id, text='All errors successfully deleted')
+    else:
+        logging.getLogger('botlog').debug('Errors could bot be deleted: access denied. Check admins list')
+        context.bot.send_message(chat_id=chat_id, text='Только администратор может удалить все ошибки')
+
+
+@catch_error
+def chat_id_(update, context):
+    """Print chat id"""
+
+    chat_id = update.effective_chat.id
+
+    logging.getLogger('botlog').info(f'Printing chat id in chat #{chat_id}')
+    context.bot.send_message(chat_id=chat_id, text=f'Current chat id: {chat_id}')
+
+
+@catch_error
+def license_(update, context):
+    """Send information about bot status"""
+    logging.getLogger('botlog').info('Printing license info to chat with id ' + str(update.effective_chat.id))
+
+    ai = AppInfo()
+
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f'{ai.app_name} {ai.app_version} (build: {ai.app_build})\n\n'
+                                  f'{license_str}')

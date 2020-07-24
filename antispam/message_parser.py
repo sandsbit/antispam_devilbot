@@ -188,12 +188,12 @@ def handle_mention_violation(update, context):
             if sanctions[1] == Sanction.BAN_MEDIA_WEEK:
                 message += ' Запрет отправки медиа на неделю так же не будет лишним :/'
 
-                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=media_ban_permissions,
                                                  until_date=int(time.time()) + 3600*24*7)
             if sanctions[1] == Sanction.BAN_MEDIA_MONTH:
                 message += ' Запрет отправки медиа на месяц так же не будет лишним :/'
 
-                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=media_ban_permissions,
                                                  until_date=int(time.time()) + 3600*24*31)
 
         context.bot.send_message(chat_id=chat_id, text=message)

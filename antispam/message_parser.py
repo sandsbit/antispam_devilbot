@@ -23,15 +23,8 @@
 
 import time
 import logging
-import json
 
 from threading import Thread
-from enum import Enum
-from typing import List, Dict, Tuple
-from datetime import datetime
-from collections import defaultdict
-from os import path
-
 from telegram import Bot
 from telegram.error import TimedOut, RetryAfter, Unauthorized
 
@@ -39,6 +32,7 @@ from antispam.utils.errorm import ErrorManager, catch_error
 from antispam.utils.db import DBUtils
 from antispam.announcements import ChatsManager, AnnouncementsManager
 from antispam.commands import hhelp
+from antispam.usernames import UsernamesManager
 
 
 class AnnouncementsThread(Thread):
@@ -124,6 +118,8 @@ class AnnouncementsThread(Thread):
 
 @catch_error
 def handle_group_migration_or_join(update, context):
+    UsernamesManager().set_username(update.effective_user.id, update.effective_user.name)
+
     if update.message is not None:
         if update.message.new_chat_members is not None:
             for new_member in update.message.new_chat_members:

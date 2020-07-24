@@ -26,36 +26,44 @@ import logging
 from mysql.connector.errors import DatabaseError
 
 from antispam.utils.db import DBUtils
+from antispam.utils.singleton import SingletonMeta
 
 
 class NoSuchUser(Exception):
     pass
 
 
-class UsernamesManager:
+class UsernamesManager(metaclass=SingletonMeta):
     """Associate user's id with username"""
 
     blog = logging.getLogger('botlog')
     db: DBUtils = DBUtils()
 
+    user_names = dict()
+
+    def __init__(self):
+        """Load usernames table from database"""
+
+        self.blog.debug('Creating UsernamesManager instance')
+
+        result = self.db.run_single_query('select user_id, name from usernames')
+
+        self.user_names = dict(map(lambda x: (int(x[0]), x[1]), result))
+
     def get_username_by_id(self, id_: int) -> str:
         """Get user's name from database by his id. NoSuchUser will be thrown if there is no such user id in database"""
         self.blog.info(f'Getting username of user with id #{id_}')
 
-        result = self.db.run_single_query('select name from usernames where user_id = %s', [id_])
-
-        if len(result) == 0:
-            raise NoSuchUser
-        elif len(result) != 1:
-            msg = f"Too many names associated with user with id #{id_}"
-            self.blog.error(msg)
-            raise DatabaseError(msg)
+        if id_ in self.user_names:
+            return self.user_names[id_]
         else:
-            return result[0][0]
+            raise NoSuchUser
 
     def set_username(self, id_: int, name: str) -> None:
         """Set name of user with given id"""
         self.blog.info(f'Setting username of user with id #{id_} to "{name}"')
 
-        self.db.run_single_update_query('insert into usernames (user_id, name) values (%(id)s, %(name)s) '
-                                        'on duplicate key update name = %(name)s', {'id': id_, 'name': name})
+        if self.user_names.get(id_, '') is not name:
+            self.db.run_single_update_query('insert into usernames (user_id, name) values (%(id)s, %(name)s) '
+                                            'on duplicate key update name = %(name)s', {'id': id_, 'name': name})
+            user_names[id_] = name

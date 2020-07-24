@@ -209,8 +209,11 @@ if __name__ == "__main__":
         dispatcher.add_handler(CommandHandler('chat_id', commands.chat_id_))
         blog.info('Added handler for /chat_id command')
 
-    dispatcher.add_handler(MessageHandler(Filters.all, message_parser.handle_group_migration_or_join))
+    dispatcher.add_handler(MessageHandler(Filters.all, message_parser.handle_group_migration_or_join), group=2)
     blog.info('Added handler for group migration to supergroup or group join')
+
+    dispatcher.add_handler(MessageHandler(Filters.all, message_parser.handle_mention_violation))
+    blog.info('Added handler that checks mention violations')
 
     blog.info('Starting announcements thread')
     ann_thread = message_parser.AnnouncementsThread(updater.bot)

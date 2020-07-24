@@ -25,14 +25,15 @@ import time
 import logging
 
 from threading import Thread
-from telegram import Bot
+from telegram import Bot, ChatPermissions
 from telegram.error import TimedOut, RetryAfter, Unauthorized
 
 from antispam.utils.errorm import ErrorManager, catch_error
 from antispam.utils.db import DBUtils
 from antispam.announcements import ChatsManager, AnnouncementsManager
 from antispam.commands import hhelp
-from antispam.usernames import UsernamesManager
+from antispam.usernames import UsernamesManager, NoSuchUser
+from antispam.banned_mentions import MentionBanManager, ViolationsManager, Sanction
 
 
 class AnnouncementsThread(Thread):
@@ -117,8 +118,90 @@ class AnnouncementsThread(Thread):
 
 
 @catch_error
+def handle_mention_violation(update, context):
+    """Check message for banned mentions"""
+
+    blog = logging.getLogger('botlog')
+    bmm, vm = MentionBanManager(), ViolationsManager()
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    username = update.effective_user.username
+    text = update.message.text
+
+    mentions = []
+
+    if update.effective_user.is_bot:
+        return
+
+    for entity in update.message.entities:
+        if entity.type == 'mention':
+            b, len_ = entity.offset, entity.length
+
+            mentions.append(text[b, b+len_])
+
+    if len(mentions) == 0:
+        return
+
+    banned_mentions = bmm.get_all_users_ban_mention(chat_id)
+    banned_mentions_dict = dict()
+    for bm in banned_mentions:
+        try:
+            banned_mentions_dict[UsernamesManager().get_username_by_id(bm)] = bm
+        except NoSuchUser:
+            pass
+
+    violations_id = []
+    for mention in mentions:
+        if mention in banned_mentions_dict.keys() and mention != username:
+            violations_id.append(banned_mentions_dict[mention])
+
+    if len(violations_id) != 0:
+        sanctions = vm.register_violation(chat_id, user_id, violations_id)
+
+        mention_list = ', '.join([UsernamesManager().get_username_by_id(id_)[1:] for id_ in violations_id])
+        message = f'Упс! {username} упомянул {mention_list}, что есть не по правилам :(. '
+
+        if len(sanctions) > 2:
+            raise RuntimeError('Invalid sanctions list')
+
+        if sanctions[0] == Sanction.WARNING:
+            message += 'Больше так не делай! Это первое и последнее предупреждение!'
+        elif sanctions[0] == Sanction.MUTE_FIVE_MIN:
+            message += 'За это {username} получит мут на пять минут!'
+
+            context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                                             until_date=int(time.time()) + 300)
+        elif sanctions[0] == Sanction.MUTE_HOUR:
+            message += 'За это {username} получит мут на час!'
+
+            context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                                             until_date=int(time.time()) + 3600)
+        elif sanctions[0] == Sanction.MUTE_DAY:
+            message += 'За это {username} получит мут на день!'
+
+            context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                                             until_date=int(time.time()) + 3600*24)
+
+        if len(sanctions) == 2:
+            media_ban_permissions = ChatPermissions(True, False, False, False, False, False, False, False)
+            if sanctions[1] == Sanction.BAN_MEDIA_WEEK:
+                message += ' Запрет отправки медиа на неделю так же не будет лишним :/'
+
+                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                                                 until_date=int(time.time()) + 3600*24*7)
+            if sanctions[1] == Sanction.BAN_MEDIA_MONTH:
+                message += ' Запрет отправки медиа на месяц так же не будет лишним :/'
+
+                context.bot.restrict_chat_member(chat_id=chat_id, user_id=user_id, permissions=ChatPermissions(False),
+                                                 until_date=int(time.time()) + 3600*24*31)
+
+        context.bot.send_message(chat_id=chat_id, text=message)
+
+
+@catch_error
 def handle_group_migration_or_join(update, context):
-    UsernamesManager().set_username(update.effective_user.id, update.effective_user.name)
+    UsernamesManager().set_username(update.effective_user.id, update.effective_user.username)
 
     if update.message is not None:
         if update.message.new_chat_members is not None:

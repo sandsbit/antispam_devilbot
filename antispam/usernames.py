@@ -66,4 +66,4 @@ class UsernamesManager(metaclass=SingletonMeta):
         if self.user_names.get(id_, '') is not name:
             self.db.run_single_update_query('insert into usernames (user_id, name) values (%(id)s, %(name)s) '
                                             'on duplicate key update name = %(name)s', {'id': id_, 'name': name})
-            user_names[id_] = name
+            self.user_names[id_] = name

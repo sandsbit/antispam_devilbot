@@ -94,11 +94,38 @@ class ViolationsManager(metaclass=SingletonMeta):
     blog = logging.getLogger('botlog')
     db: DBUtils = DBUtils()
 
-    def _get_sanction_for_user(self, chat_id: int, user_id: int) -> Sanction:
+    def _get_sanction_for_user(self, chat_id: int, user_id: int) -> List[Sanction]:
         """Get sanction for given user in given chat"""
-        pass
 
-    def register_violation(self, chat_id: int, user_id: int, banned_mentions: List[int]) -> Sanction:
+        self.blog.info(f'Getting sanction for user #{user_id} in chat #{chat_id}')
+
+        user_info = self.db.run_single_query('select violations_today, violations_month from violations '
+                                             'where chat_id = %s and user_id = %s', (chat_id, user_id))
+
+        if len(user_info) == 0:
+            raise RuntimeError(f'No such user with id {user_id}')
+
+        violations_today, violations_month = user_info[0]
+
+        sanctions = []
+
+        if violations_month == 1:
+            sanctions.append(Sanction.WARNING)
+        elif violations_today <= 2 and violations_month < 10:
+            sanctions.append(Sanction.MUTE_FIVE_MIN)
+        elif (violations_today <= 2 and violations_month >= 10) or (violations_today <= 5 and violations_month < 30):
+            sanctions.append(Sanction.MUTE_HOUR)
+        else:
+            sanctions.append(Sanction.MUTE_DAY)
+
+        if violations_today == 5 or violations_month > 30:
+            sanctions.append(Sanction.BAN_MEDIA_WEEK)
+        elif violations_month > 50:
+            sanctions.append(Sanction.BAN_MEDIA_MONTH)
+
+        return sanctions
+
+    def register_violation(self, chat_id: int, user_id: int, banned_mentions: List[int]) -> List[Sanction]:
         """Register banned mention by user and returns sanction"""
 
         self.blog.info(f'Registering violation for user #{user_id} in chat #{chat_id}')

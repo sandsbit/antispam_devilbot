@@ -52,6 +52,7 @@ class UsernamesManager(metaclass=SingletonMeta):
 
     def get_username_by_id(self, id_: int) -> str:
         """Get user's name from database by his id. NoSuchUser will be thrown if there is no such user id in database"""
+
         self.blog.info(f'Getting username of user with id #{id_}')
 
         if id_ in self.user_names:
@@ -61,6 +62,7 @@ class UsernamesManager(metaclass=SingletonMeta):
 
     def set_username(self, id_: int, name: str) -> None:
         """Set name of user with given id"""
+
         self.blog.info(f'Setting username of user with id #{id_} to "{name}"')
 
         if self.user_names.get(id_, '') is not name:

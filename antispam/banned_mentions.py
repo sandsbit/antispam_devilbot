@@ -61,11 +61,20 @@ class MentionBanManager(metaclass=SingletonMeta):
 
     def check_mention(self, chat_id: int, mention_id: int) -> bool:
         """Check if mention is banned in chat"""
-        pass
+        self.blog.debug(f'Checking #{mention_id} mention in chat #{chat_id}')
+
+        return len(self.db.run_single_query('select * from mention_banned_users '
+                                            'where chat_id = %s and user_id = %s and ban_mentions = 1')) != 0
 
     def check_mentions(self, chat_id: int, mentions_ids: List[int]) -> List[int]:
         """Returns list of mentions from given list that are banned in chat"""
-        pass
+        res = []
+
+        for id_ in mentions_ids:
+            if self.check_mention(chat_id, id_):
+                res += [id_]
+
+        return res
 
 
 class Sanction(Enum):

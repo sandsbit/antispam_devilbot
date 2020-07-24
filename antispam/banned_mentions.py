@@ -37,7 +37,7 @@ class MentionBanManager(metaclass=SingletonMeta):
     blog = logging.getLogger('botlog')
     db: DBUtils = DBUtils()
 
-    def set_user_ban_mention(self, chat_id: int, user_id: int, ban_mentions: Optional[bool] = None) -> None:
+    def set_user_ban_mention(self, chat_id: int, user_id: int, ban_mentions: Optional[bool] = None) -> bool:
         """Sets ban_mention for user. By default reverses value"""
 
         self.blog.info(f'Changing ban_mentions for user #{user_id} i chat #{chat_id} to {ban_mentions} (if None than'
@@ -51,6 +51,9 @@ class MentionBanManager(metaclass=SingletonMeta):
             self.db.run_single_update_query('insert into mention_banned_users(chat_id, user_id, ban_mentions) values '
                                             '(%s, %s, %s) on duplicate key '
                                             'update ban_mentions = %s', (chat_id, user_id, ban_mentions, ban_mentions))
+
+        return self.db.run_single_query('select ban_mentions from mention_banned_users '
+                                        'where user_id = %s and chat_id = %s', (user_id, chat_id))[0][0]
 
     def get_all_users_ban_mention(self, chat_id: int) -> List[int]:
         """Returns list of IDs of all users that banned mentions in given chat"""
@@ -134,7 +137,8 @@ class ViolationsManager(metaclass=SingletonMeta):
 
         banned_mentions_str = ','.join(map(str, banned_mentions))
 
-        user_today_query = self.db.run_single_query('select today from violations where chat_id = %s and user_id = %s')
+        user_today_query = self.db.run_single_query('select today from violations where chat_id = %s and user_id = %s',
+                                                    (chat_id, user_id))
         if len(user_today_query) == 0:
             self.db.run_single_update_query(f'insert into violations(chat_id, user_id, today, violations_today, '
                                             f'violations_month, last_violation_against) '

@@ -29,8 +29,8 @@ from os import path
 from antispam.config_parsers.app_info import AppInfo
 from antispam.utils.db import DBUtils
 from antispam.utils.errorm import ErrorManager, catch_error
-from antispam.utils import lang_tools
 from antispam.announcements import ChatsManager
+from antispam.banned_mentions import MentionBanManager, ViolationsManager
 
 LICENSE_FILE = "copyinfo.txt"
 
@@ -157,6 +157,28 @@ def chat_id_(update, context):
 
     logging.getLogger('botlog').info(f'Printing chat id in chat #{chat_id}')
     context.bot.send_message(chat_id=chat_id, text=f'Current chat id: {chat_id}')
+
+
+@catch_error
+def dont_disturb_me(update, context):
+    """Add user to dont disturb  list"""
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    if hasattr(update.effective_user, 'username') and update.effective_user.username is not None:
+        username = update.effective_user.username
+    else:
+        context.bot.send_message(chat_id=chat_id, text=f'У вас нет юзернейма :(, установите его в настройках '
+                                                       f'и попробуйте еще раз.')
+
+    logging.getLogger('botlog').info(f'Add user #{user_id} in chat #{chat_id} to dont disturb list')
+
+    new_value = MentionBanManager().set_user_ban_mention(chat_id, user_id)
+    if new_value:
+        context.bot.send_message(chat_id=chat_id, text=f'Упоминать {username} теперь могу только я!')
+    else:
+        context.bot.send_message(chat_id=chat_id, text=f'Упоминать {username} теперь могу только все!')
+
 
 
 @catch_error

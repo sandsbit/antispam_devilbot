@@ -141,8 +141,8 @@ class ViolationsManager(metaclass=SingletonMeta):
                                                     (chat_id, user_id))
         if len(user_today_query) == 0:
             self.db.run_single_update_query(f'insert into violations(chat_id, user_id, today, violations_today, '
-                                            f'violations_month, last_violation_against) '
-                                            f'values (%s, %s, %s, 1, 1, %s)',
+                                            f'violations_month, violations, last_violation_against) '
+                                            f'values (%s, %s, %s, 1, 1, 1, %s)',
                                             (chat_id, user_id, today, banned_mentions_str))
         else:
             today_user = user_today_query[0][0]
@@ -150,17 +150,20 @@ class ViolationsManager(metaclass=SingletonMeta):
             if today_user == today:
                 self.db.run_single_update_query('update violations set last_violation_against = %s, '
                                                 'violations_today = violations_today + 1, '
-                                                'violations_month = violations_month + 1 where user_id = %s '
+                                                'violations_month = violations_month + 1,'
+                                                'violations = violations + 1 where user_id = %s '
                                                 'and chat_id = %s', (banned_mentions_str, user_id, chat_id))
             elif today.month == today_user.month:
                 self.db.run_single_update_query('update violations set last_violation_against = %s, '
                                                 'today = %s, violations_today = 1, '
-                                                'violations_month = violations_month + 1 where user_id = %s '
+                                                'violations_month = violations_month + 1,'
+                                                'violations = violations + 1 where user_id = %s '
                                                 'and chat_id = %s', (banned_mentions_str, today, user_id, chat_id))
             else:
                 self.db.run_single_update_query('update violations set last_violation_against = %s, '
                                                 'today = %s, violations_today = 1, '
-                                                'violations_month = 1 where user_id = %s '
+                                                'violations_month = 1,'
+                                                'violations = violations + 1 where user_id = %s '
                                                 'and chat_id = %s', (banned_mentions_str, today, user_id, chat_id))
 
         return self._get_sanction_for_user(chat_id, user_id)

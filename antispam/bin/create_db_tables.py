@@ -108,6 +108,7 @@ def create_violations(dbu: DBUtils):
                                      today date not null,
                                      violations_today int null,
                                      violations_month int null,
+                                     violations_all int null,
                                      last_violation_against text not null,
                                      constraint violations_pk
                                       primary key (id)

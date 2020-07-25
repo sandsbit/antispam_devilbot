@@ -248,6 +248,26 @@ def list_c(update: Update, context: CallbackContext):
 
 
 @catch_error
+def stats(update: Update, context: CallbackContext):
+    """Add user to dont disturb  list"""
+
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+
+    logging.getLogger('botlog').info(f'Printing stats of user #{user_id} in chat #{chat_id}')
+
+    violations_today, violations_month, violations_all = ViolationsManager().get_user_stats(chat_id, user_id)
+    if violations_today == 0 and violations_month == 0 and violations_all == 0:
+        message = 'Ммм да вы ещё ничего не натворили, чудо!'
+    else:
+        message = f'Увы, нарушения у вас есть:\n\n' \
+                  f'Нарушений седня: {violations_today}\n' \
+                  f'Нарушений в этом месяце: {violations_month}\n' \
+                  f'Нарушений всего: {violations_all}\n'
+    context.bot.send_message(chat_id=chat_id, text=message)
+
+
+@catch_error
 def license_(update, context):
     """Send information about bot status"""
     logging.getLogger('botlog').info('Printing license info to chat with id ' + str(update.effective_chat.id))

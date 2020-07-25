@@ -196,6 +196,9 @@ if __name__ == "__main__":
     dispatcher.add_handler(CommandHandler('list', commands.list_c))
     blog.info('Added handler for /list command')
 
+    dispatcher.add_handler(CommandHandler('top', commands.top))
+    blog.info('Added handler for /top command')
+
     dispatcher.add_handler(ConversationHandler(
         entry_points=[CommandHandler('donate', donate.donate_ask if not DEBUG_MODE else donate.donate_ask_d)],
         states={

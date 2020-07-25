@@ -200,6 +200,38 @@ def process_list(bd_resp: List[int]) -> str:
     return message
 
 
+def process_top(bd_resp: List[Tuple[int, int]]) -> str:
+    message = ''
+
+    if len(bd_resp) == 0:
+        message += f'В ТОПе никого нет :)'
+
+    for user_id, violations in bd_resp:
+        try:
+            user_name = UsernamesManager().get_username_by_id(user_id)
+        except NoSuchUser:
+            user_name = f'Unnamed user ({user_id})'
+        message += f'{user_name}: {violations}\n'
+
+    return message
+
+
+@catch_error
+def top(update, context):
+    """Print top 5 of chat"""
+
+    chat_id = update.effective_chat.id
+
+    logging.getLogger('botlog').info(f'Printing TOP-5 user in chat #{chat_id}')
+
+    message = 'ТОП-5 людей с наибольшим количеством нарушений:\n\n'
+
+    top_ = ViolationsManager().get_ordered_violations_top(chat_id, 5)
+    message += process_top(top_)
+
+    context.bot.send_message(chat_id=chat_id, text=message)
+
+
 @catch_error
 def list_c(update: Update, context: CallbackContext):
     """Add user to dont disturb  list"""

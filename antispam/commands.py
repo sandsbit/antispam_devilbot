@@ -180,6 +180,10 @@ def chat_id_(update, context):
 def dont_disturb_me(update, context):
     """Add user to dont disturb  list"""
 
+    if update.effective_chat.type == 'private':
+        context.bot.send_message(update.effective_chat.id, text='Эта команда доступна только в групповых чатах!')
+        return
+
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
     if hasattr(update.effective_user, 'username') and update.effective_user.username is not None:
@@ -233,6 +237,10 @@ def process_top(bd_resp: List[Tuple[int, int]]) -> str:
 def top(update, context):
     """Print top 5 of chat"""
 
+    if update.effective_chat.type == 'private':
+        context.bot.send_message(update.effective_chat.id, text='Эта команда доступна только в групповых чатах!')
+        return
+
     chat_id = update.effective_chat.id
 
     logging.getLogger('botlog').info(f'Printing TOP-5 user in chat #{chat_id}')
@@ -249,6 +257,10 @@ def top(update, context):
 def list_c(update: Update, context: CallbackContext):
     """Add user to dont disturb  list"""
 
+    if update.effective_chat.type == 'private':
+        context.bot.send_message(update.effective_chat.id, text='Эта команда доступна только в групповых чатах!')
+        return
+
     chat_id = update.effective_chat.id
 
     logging.getLogger('botlog').info(f'Printing list of users with banned mentions in chat #{chat_id}')
@@ -263,6 +275,10 @@ def list_c(update: Update, context: CallbackContext):
 @catch_error
 def stats(update: Update, context: CallbackContext):
     """Add user to dont disturb  list"""
+
+    if update.effective_chat.type == 'private':
+        context.bot.send_message(update.effective_chat.id, text='Эта команда доступна только в групповых чатах!')
+        return
 
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id

@@ -200,8 +200,11 @@ def handle_mention_violation(update, context):
                                                      until_date=int(time.time()) + 3600*24*31)
 
             context.bot.send_message(chat_id=chat_id, text=message)
-    except BadRequest:
-        context.bot.send_message(chat_id=chat_id, text=f'@{username} - Бог! Не могу забанить :(')
+    except BadRequest as e:
+        if 'enough rights' in e.message:
+            context.bot.send_message(chat_id=chat_id, text='Увы бот - не админ! Не могу забанить :(. Поправьте это плиз!')
+        else:
+            context.bot.send_message(chat_id=chat_id, text=f'@{username} - Бог! Не могу забанить :(')
 
 
 @catch_error
@@ -214,7 +217,7 @@ def handle_group_migration_or_join(update, context):
                 if new_member.id == context.bot.id:
                     chat_id = update.effective_chat.id
                     logging.getLogger('botlog').info(f'Group with id #{chat_id} will be added to database after adding bot to it')
-                    hhelp(update, context, 'Добро пожаловать!')
+                    hhelp(update, context, 'Добро пожаловать!\n Не забудьте сделать бота админом!')
                     ChatsManager().add_new_chat(chat_id)
         if update.message.migrate_to_chat_id is not None:
             old_chat_id = update.effective_chat.id

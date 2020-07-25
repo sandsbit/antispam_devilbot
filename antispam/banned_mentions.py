@@ -60,8 +60,8 @@ class MentionBanManager(metaclass=SingletonMeta):
 
         self.blog.info(f'Getting all ban_mentions users in chat #{chat_id}')
 
-        return list(map(lambda x: x[0], self.db.run_single_query('select user_id from mention_banned_users '
-                                                                 'where chat_id = %s and ban_mentions = 1', [chat_id])))
+        return list(map(lambda x: int(x[0]), self.db.run_single_query('select user_id from mention_banned_users '
+                                                                      'where chat_id = %s and ban_mentions = 1', [chat_id])))
 
     def check_mention(self, chat_id: int, mention_id: int) -> bool:
         """Check if mention is banned in chat"""

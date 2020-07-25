@@ -24,7 +24,7 @@
 import logging
 import datetime
 
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from enum import Enum
 
 from antispam.utils.singleton import SingletonMeta
@@ -171,3 +171,14 @@ class ViolationsManager(metaclass=SingletonMeta):
     def forgive_violation(self, chat_id: int, user_id: int, forgiven_by: int) -> None:
         """Register user forgive somebody"""
         raise NotImplementedError('You cannot forgive people(')
+
+    def get_ordered_violations_top(self, chat_id: int, amount: int = 5) -> List[Tuple[int, int]]:
+        """
+        Get ordered *amount* people from chat with biggest amount of violations.
+        Returns list with tuples, which contain users' IDs and amount of violations
+        """
+        self.blog.debug(f'Getting chat #{chat_id} TOP. amount = {amount}')
+
+        return self.db.run_single_query(f'select distinct user_id, violations_all from violations where chat_id = %s'
+                                        f' and violations_all > 0 order by violations_all desc limit %s',
+                                        [chat_id, amount])

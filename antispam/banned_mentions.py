@@ -182,3 +182,30 @@ class ViolationsManager(metaclass=SingletonMeta):
         return self.db.run_single_query(f'select distinct user_id, violations_all from violations where chat_id = %s'
                                         f' and violations_all > 0 order by violations_all desc limit %s',
                                         [chat_id, amount])
+
+    def get_user_stats(self, chat_id: int, user_id: int) -> Tuple[int, int, int]:
+        """Returns tuple with the number of violations today, this month and since the beginning of time"""
+
+        self.blog.info(f'Getting user #{user_id} stats in chat #{chat_id}.')
+
+        result = self.db.run_single_query('select today, violations_today, violations_month,'
+                                          ' violations_all from violations'
+                                          ' where chat_id = %s and user_id = %s', (chat_id, user_id))
+
+        if len(result) not in [0, 1]:
+            msg = f'Invalid database response for user #{user_id} in chat #{chat_id}'
+            self.blog.error(msg)
+            raise RuntimeError(msg)
+
+        if len(result) == 0:
+            return 0, 0, 0
+        elif len(result) == 1:
+            today = datetime.datetime.utcnow().date()
+            today_user, violations_today, violations_month, violations_all = result[0]
+
+            if today == today_user:
+                return violations_today, violations_month, violations_all
+            elif today.month == today_user.month:
+                return 0, violations_month, violations_all
+            else:
+                return 0, 0, violations_all

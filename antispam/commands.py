@@ -26,11 +26,15 @@ import logging
 from typing import Optional, List, Tuple
 from os import path
 
+from telegram import Update
+from telegram.ext import CallbackContext
+
 from antispam.config_parsers.app_info import AppInfo
 from antispam.utils.db import DBUtils
 from antispam.utils.errorm import ErrorManager, catch_error
 from antispam.announcements import ChatsManager
 from antispam.banned_mentions import MentionBanManager, ViolationsManager
+from antispam.usernames import UsernamesManager, NoSuchUser
 
 LICENSE_FILE = "copyinfo.txt"
 
@@ -170,6 +174,7 @@ def dont_disturb_me(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text=f'У вас нет юзернейма :(, установите его в настройках '
                                                        f'и попробуйте еще раз.')
+        return
 
     logging.getLogger('botlog').info(f'Add user #{user_id} in chat #{chat_id} to dont disturb list')
 
@@ -179,6 +184,35 @@ def dont_disturb_me(update, context):
     else:
         context.bot.send_message(chat_id=chat_id, text=f'Упоминать {username} теперь могу только все!')
 
+
+def process_list(bd_resp: List[int]) -> str:
+    message = ''
+
+    if len(bd_resp) == 0:
+        message += f'В списке никого нет!'
+
+    for user_id in bd_resp:
+        try:
+            message += UsernamesManager().get_username_by_id(user_id) + '\n'
+        except NoSuchUser:
+            message += f'Unnamed user ({user_id})\n'
+
+    return message
+
+
+@catch_error
+def list_c(update: Update, context: CallbackContext):
+    """Add user to dont disturb  list"""
+
+    chat_id = update.effective_chat.id
+
+    logging.getLogger('botlog').info(f'Printing list of users with banned mentions in chat #{chat_id}')
+
+    message = 'Список людей, которых нельзя упоминать:\n\n'
+    list_ = MentionBanManager().get_all_users_ban_mention(chat_id)
+    message += process_list(list_)
+
+    context.bot.send_message(chat_id=chat_id, text=message)
 
 
 @catch_error

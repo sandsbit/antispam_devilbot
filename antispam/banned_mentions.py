@@ -135,7 +135,7 @@ class ViolationsManager(metaclass=SingletonMeta):
 
         today = datetime.datetime.utcnow().date()
 
-        banned_mentions_str = ','.join(map(str, banned_mentions))
+        banned_mentions_str = ','.join(map(str, set(banned_mentions)))
 
         user_today_query = self.db.run_single_query('select today from violations where chat_id = %s and user_id = %s',
                                                     (chat_id, user_id))
